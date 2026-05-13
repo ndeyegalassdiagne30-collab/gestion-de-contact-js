@@ -1,0 +1,32 @@
+{
+  "contacts": [
+    {
+      "firstName": "Ami",
+      "lastName": "Diouf",
+      "email": "diouf@gmail.con",
+      "phone": "777777777",
+      "role": "Designer",
+      "createdAt": "13 mai 2026",
+      "id": "OZNzN9X9PnU"
+    },
+    {
+      "firstName": "ndeye",
+      "lastName": "diagne",
+      "email": "ndeyegalassdiagne30@gmail.com",
+      "phone": "778977777",
+      "role": "Designer",
+      "createdAt": "13 mai 2026",
+      "id": "wEFruIatNvY"
+    },
+    {
+      "firstName": "Sokhna Faty",
+      "lastName": "Gueye",
+      "email": "mamefat2004@gmail.com",
+      "phone": "778956767",
+      "role": "Designer",
+      "createdAt": "13 mai 2026",
+      "id": "8mVD79QOzy4"
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
+}

@@ -1,5 +1,4 @@
 // ── Toasts 
-// Dépendances : elements.js uniquement
 import { toastContainer } from "../DOM/elements.js";
 
 const TOAST_ICONS  = { success: "✓", danger: "✕", warn: "!" };

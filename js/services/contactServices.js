@@ -1,6 +1,11 @@
-// ── Services contacts 
-// Dépendances : contactStore.js, elements.js, messageRenderer.js
-import { getContacts, saveContacts } from "../stores/contactStores.js";
+
+import {
+    recupererLesContactsDuServeur,
+    ajouterSurLeServeur,
+    modifierSurLeServeur,
+    supprimerSurLeServeur,
+} from "../stores/contactStores.js";
+import { validateForm } from "../utils/valider.js";
 import {
     form, editIdInput, firstNameEl, lastNameEl, emailEl, phoneEl, roleEl,
     submitLabel, cancelBtn, contactList, listCount, emptyState,
@@ -8,22 +13,26 @@ import {
 } from "../DOM/elements.js";
 import { showToast } from "../UI/messageRenderer.js";
 
-// ── Constantes
-const PER_PAGE    = 6;
-const PHONE_REGEX = /^(70|71|75|76|77|78)\d{7}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+let contactsCache = [];
 
-// ── État partage (exporté pour modalRenderer et app) 
-export let currentPage     = 1;
-export let searchQuery     = "";
-export let selectedIds     = new Set();
+export async function syncContactsFromServer() {
+    contactsCache = await recupererLesContactsDuServeur();
+}
+
+const PER_PAGE = 6;
+
+export let currentPage = 1;
+export let searchQuery = "";
+export let selectedIds = new Set();
 export let pendingDeleteId = null;
 
-export function setCurrentPage(p)     { currentPage     = p; }
-export function setSearchQuery(q)     { searchQuery     = q; }
-export function setPendingDeleteId(id){ pendingDeleteId = id; }
+export function setCurrentPage(p) { currentPage = p; }
+export function setSearchQuery(q) { searchQuery = q; }
+export function setPendingDeleteId(id) { pendingDeleteId = id; }
 
-// HELPERS FILTRE / PAGINATION
+export function getContacts() {
+    return contactsCache;
+}
 
 export function getFiltered() {
     const q = searchQuery.trim().toLowerCase();
@@ -44,10 +53,8 @@ export function getPageSlice(filtered) {
     return filtered.slice(start, start + PER_PAGE);
 }
 
-// RENDU LISTE
-
 export function renderList() {
-    const filtered   = getFiltered();
+    const filtered = getFiltered();
     const totalPages = getTotalPages(filtered);
 
     if (currentPage > totalPages) currentPage = totalPages;
@@ -68,7 +75,6 @@ export function renderList() {
 
     renderPagination(filtered.length, totalPages);
 
-    // Importer updateSelectionUI dynamiquement pour éviter le cycle
     import("../UI/modalRenderer.js").then(({ updateSelectionUI }) => updateSelectionUI());
 }
 
@@ -99,82 +105,68 @@ export function renderPagination(total, totalPages) {
     paginationEl.appendChild(next);
 }
 
-// CRUD
+const MSG_SERVEUR = "Ouvre un terminal dans le dossier json_serveur, puis lance : npm install puis npm run serve";
 
-export function createContact(data) {
-    const contacts = getContacts();
-    const contact = {
-        id:        Date.now(),
+export async function createContact(data) {
+    const contactSansId = {
         firstName: data.firstName.trim(),
-        lastName:  data.lastName.trim(),
-        email:     data.email.trim().toLowerCase(),
-        phone:     data.phone.trim(),
-        role:      data.role,
+        lastName: data.lastName.trim(),
+        email: data.email.trim().toLowerCase(),
+        phone: data.phone.trim(),
+        role: data.role,
         createdAt: new Date().toLocaleDateString("fr-FR", {
             day: "2-digit", month: "short", year: "numeric",
         }),
     };
-    contacts.push(contact);
-    saveContacts(contacts);
-    return contact;
+    const ok = await ajouterSurLeServeur(contactSansId);
+    await syncContactsFromServer();
+    return ok;
 }
 
 export function getContactById(id) {
     return getContacts().find((c) => c.id === id) || null;
 }
 
-export function updateContact(id, data) {
-    const contacts = getContacts();
-    const i = contacts.findIndex((c) => c.id === id);
-    if (i === -1) return null;
-    contacts[i] = {
-        ...contacts[i],
+export async function updateContact(id, data) {
+    const existant = getContactById(id);
+    if (!existant) return null;
+    const misAJour = {
+        ...existant,
         firstName: data.firstName.trim(),
-        lastName:  data.lastName.trim(),
-        email:     data.email.trim().toLowerCase(),
-        phone:     data.phone.trim(),
-        role:      data.role,
+        lastName: data.lastName.trim(),
+        email: data.email.trim().toLowerCase(),
+        phone: data.phone.trim(),
+        role: data.role,
     };
-    saveContacts(contacts);
-    return contacts[i];
+    const ok = await modifierSurLeServeur(id, misAJour);
+    await syncContactsFromServer();
+    if (!ok) return null;
+    return getContactById(id);
 }
 
-export function deleteContact(id) {
-    saveContacts(getContacts().filter((c) => c.id !== id));
+export async function deleteContact(id) {
+    const ok = await supprimerSurLeServeur(id);
+    await syncContactsFromServer();
+    return ok;
 }
 
-export function deleteContacts(ids) {
-    saveContacts(getContacts().filter((c) => !ids.has(c.id)));
-}
-
-// VALIDATION
-
-export function validateForm(data) {
-    const errors = {};
-
-    if (!data.firstName.trim())
-        errors.firstName = "Le prénom est requis.";
-    if (!data.lastName.trim())
-        errors.lastName = "Le nom est requis.";
-    if (!data.email.trim())
-        errors.email = "L'email est requis.";
-    else if (!EMAIL_REGEX.test(data.email.trim()))
-        errors.email = "Format invalide. Ex: nom@domaine.com";
-    if (!data.phone.trim())
-        errors.phone = "Le numéro est requis.";
-    else if (!PHONE_REGEX.test(data.phone.trim()))
-        errors.phone = "Format invalide. Ex: 771234567 (70/71/75/76/77/78 + 7 chiffres)";
-    if (!data.role)
-        errors.role = "Veuillez choisir un rôle.";
-
-    return errors;
+export async function deleteContacts(ids) {
+    for (const id of ids) {
+        const ok = await supprimerSurLeServeur(id);
+        if (!ok) {
+            await syncContactsFromServer();
+            return false;
+        }
+    }
+    await syncContactsFromServer();
+    return true;
 }
 
 export function showErrors(errors) {
     clearErrors();
     const fields = ["firstName", "lastName", "email", "phone", "role"];
     fields.forEach((f) => {
-        const errEl   = document.getElementById(`err-${f}`);
+        const errEl = document.getElementById(`err-${f}`);
         const inputEl = document.getElementById(f);
         if (errors[f]) {
             errEl.textContent = errors[f];
@@ -192,7 +184,6 @@ export function clearErrors() {
     });
 }
 
-// Effacer l'erreur au focus
 ["firstName", "lastName", "email", "phone", "role"].forEach((f) => {
     document.getElementById(f).addEventListener("input", () => {
         document.getElementById(`err-${f}`).textContent = "";
@@ -200,21 +191,19 @@ export function clearErrors() {
     });
 });
 
-// FORMULAIRE — état ajout / édition
-
 export function setEditMode(contact) {
-    editIdInput.value       = contact.id;
-    firstNameEl.value       = contact.firstName;
-    lastNameEl.value        = contact.lastName;
-    emailEl.value           = contact.email;
-    phoneEl.value           = contact.phone;
-    roleEl.value            = contact.role;
+    editIdInput.value = contact.id;
+    firstNameEl.value = contact.firstName;
+    lastNameEl.value = contact.lastName;
+    emailEl.value = contact.email;
+    phoneEl.value = contact.phone;
+    roleEl.value = contact.role;
     submitLabel.textContent = "Mettre à jour";
     cancelBtn.classList.add("visible");
     clearErrors();
 
     document.querySelectorAll(".contact-card").forEach((el) => {
-        el.classList.toggle("editing", Number(el.dataset.id) === contact.id);
+        el.classList.toggle("editing", string(el.dataset.id) === contact.id);
     });
 
     document.querySelector(".panel-form").scrollTo({ top: 0, behavior: "smooth" });
@@ -223,7 +212,7 @@ export function setEditMode(contact) {
 
 export function resetForm() {
     form.reset();
-    editIdInput.value       = "";
+    editIdInput.value = "";
     submitLabel.textContent = "Ajouter";
     cancelBtn.classList.remove("visible");
     clearErrors();
@@ -234,28 +223,27 @@ export function resetForm() {
 
 cancelBtn.addEventListener("click", () => resetForm());
 
-// SOUMISSION — CREATE + UPDATE
-
-form.addEventListener("submit", (e) => {
+form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const data = {
         firstName: firstNameEl.value,
-        lastName:  lastNameEl.value,
-        email:     emailEl.value,
-        phone:     phoneEl.value,
-        role:      roleEl.value,
+        lastName: lastNameEl.value,
+        email: emailEl.value,
+        phone: phoneEl.value,
+        role: roleEl.value,
     };
 
-    const errors     = validateForm(data);
-    const id         = editIdInput.value;
+    const errors = validateForm(data);
+    const id = editIdInput.value;
     const allContacts = getContacts();
+    const idNum = id ? String(id) : null;
 
     const isDuplicateEmail = allContacts.find(
-        (c) => c.email === data.email.trim().toLowerCase() && c.id !== Number(id)
+        (c) => c.email === data.email.trim().toLowerCase() && c.id !== idNum
     );
     const isDuplicatePhone = allContacts.find(
-        (c) => c.phone === data.phone.trim() && c.id !== Number(id)
+        (c) => c.phone === data.phone.trim() && c.id !== idNum
     );
 
     if (isDuplicateEmail) errors.email = "Cet email est déjà utilisé.";
@@ -269,30 +257,38 @@ form.addEventListener("submit", (e) => {
     clearErrors();
 
     if (id) {
-        const updated = updateContact(Number(id), data);
+        const updated = await updateContact(String(id), data);
+        if (!updated) {
+            showToast("danger", "Erreur", MSG_SERVEUR);
+            return;
+        }
         resetForm();
         renderList();
         showToast("success", "Contact mis à jour",
             `${updated.firstName} ${updated.lastName} a été modifié avec succès.`);
     } else {
-        const created = createContact(data);
+        const ok = await createContact(data);
+        if (!ok) {
+            showToast("danger", "Erreur", MSG_SERVEUR);
+            return;
+        }
         resetForm();
         currentPage = getTotalPages(getFiltered());
         renderList();
+        const liste = getContacts();
+        const dernier = liste[liste.length - 1];
         showToast("success", "Contact ajouté",
-            `${created.firstName} ${created.lastName} a été ajouté avec succès.`);
+            dernier
+                ? `${dernier.firstName} ${dernier.lastName} a été ajouté avec succès.`
+                : "Contact ajouté avec succès.");
     }
 });
-
-// RECHERCHE
 
 searchInput.addEventListener("input", () => {
     searchQuery = searchInput.value;
     currentPage = 1;
     renderList();
 });
-
-// CARTE
 
 export function initials(f, l) {
     return ((f[0] || "") + (l[0] || "")).toUpperCase();
@@ -327,5 +323,7 @@ export function createCard(contact) {
     return li;
 }
 
-//init
-renderList();
+(async function demarrer() {
+    await syncContactsFromServer();
+    renderList();
+})();

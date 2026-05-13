@@ -1,13 +1,50 @@
-// ── Store — localStorage 
-// Ce fichier n'importe RIEN. Il gère uniquement la persistance des données.
+ const URL_CONTACTS = "http://localhost:3000/contacts";
 
-const STORAGE_KEY = "contacts_v2";
-
-export function getContacts() {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+export async function recupererLesContactsDuServeur() {
+    try {
+        const reponse = await fetch(URL_CONTACTS);
+        if (!reponse.ok) {
+            return [];
+        }
+        const donnees = await reponse.json();
+        return Array.isArray(donnees) ? donnees : [];
+    } catch {
+        return [];
+    }
 }
 
-export function saveContacts(contacts) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(contacts));
+export async function ajouterSurLeServeur(contactSansId) {
+    try {
+        const reponse = await fetch(URL_CONTACTS, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(contactSansId),
+        });
+        return reponse.ok;
+    } catch {
+        return false;
+    }
+}
+
+export async function modifierSurLeServeur(id, contact) {
+    try {
+        const reponse = await fetch(`${URL_CONTACTS}/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(contact),
+        });
+        return reponse.ok;
+    } catch {
+        return false;
+    }
+}
+
+export async function supprimerSurLeServeur(id) {
+    try {
+        const reponse = await fetch(`${URL_CONTACTS}/${id}`,
+         { method: "DELETE" });
+        return reponse.ok;
+    } catch {
+        return false;
+    }
 }

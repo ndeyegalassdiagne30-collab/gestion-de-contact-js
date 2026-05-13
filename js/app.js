@@ -1,10 +1,3 @@
-// ── app.js — Point d'entrée ───────────────────────────────────────────────────
-// Orchestre les modules sans créer de cycle.
-// Arbre d'imports :
-//   app.js
-//   ├── contactServices.js  (importe store, elements, messageRenderer)
-//   └── modalRenderer.js    (importe elements, messageRenderer, contactServices)
-
 import {
     contactList,
     modalDelete, modalDeleteDesc,
@@ -24,7 +17,7 @@ contactList.addEventListener("click", (e) => {
 
     // ── MODIFIER ──
     if (editBtn) {
-        const id      = Number(editBtn.dataset.id);
+        const id      = String(editBtn.dataset.id);
         const contact = getContactById(id);
         if (!contact) return;
         setEditMode(contact);
@@ -32,7 +25,7 @@ contactList.addEventListener("click", (e) => {
 
     // ── SUPPRIMER (ouvre le modal) ──
     if (deleteBtn) {
-        const id      = Number(deleteBtn.dataset.id);
+        const id      = String(deleteBtn.dataset.id);
         const contact = getContactById(id);
         if (!contact) return;
         setPendingDeleteId(id);

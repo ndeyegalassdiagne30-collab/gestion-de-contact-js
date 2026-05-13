@@ -1,6 +1,5 @@
 // ── Éléments DOM 
-// Ce fichier n'importe RIEN. Il exporte uniquement des références DOM.
-// Tous les autres modules importent depuis ici.
+
 
 export const editIdInput      = document.getElementById("editId");
 export const form             = document.getElementById("contactForm");
