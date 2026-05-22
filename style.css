@@ -7,6 +7,12 @@
     box-sizing: border-box;
 }
 
+/* Garantit que l'attribut hidden masque toujours l'élément,
+   même si une règle CSS lui donne un display explicite (ex: flex, grid). */
+[hidden] {
+    display: none !important;
+}
+
 /* ── Variables ──────────────────────────────────────────────────────────── */
 :root {
     --bg: #fff5f7;
@@ -412,6 +418,7 @@ label {
 
 input[type="text"],
 input[type="email"],
+input[type="password"],
 select {
     background: var(--surface-2);
     border: 1px solid var(--border);
@@ -876,6 +883,99 @@ select {
 ::-webkit-scrollbar-thumb {
     background: var(--border-dark);
     border-radius: 10px;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   PAGE CONNEXION
+════════════════════════════════════════════════════════════════════════ */
+#page-login {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 24px;
+}
+
+.login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 44px 40px 36px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: var(--shadow-modal);
+}
+
+.login-card .brand {
+    margin-bottom: 20px;
+}
+
+.login-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+
+.login-sub {
+    font-size: 12.5px;
+    color: var(--text-3);
+    margin-bottom: 28px;
+    line-height: 1.5;
+}
+
+.login-submit {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.login-hint {
+    margin-top: 20px;
+    font-size: 11.5px;
+    color: var(--text-3);
+    text-align: center;
+    line-height: 1.6;
+}
+
+.login-hint strong {
+    color: var(--text-2);
+}
+
+/* ── Barre déconnexion (panneau gauche) ──────────────────────────────────── */
+.logout-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.user-name {
+    font-size: 11.5px;
+    color: var(--text-3);
+    font-style: italic;
+    flex: 1;
+}
+
+.btn-logout {
+    background: transparent;
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-sm);
+    padding: 5px 11px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+
+.btn-logout:hover {
+    background: var(--danger-light);
+    border-color: var(--danger);
+    color: var(--danger);
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
